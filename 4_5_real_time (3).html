@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการและส่งใบงานโครงงาน ม.4 - ม.5 (Real-time)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2 rounded-xl">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg sm:text-xl leading-tight">ProjectHub ม.ปลาย</h1>
+                    <p class="text-xs text-indigo-200 hidden sm:block">ระบบติดตามและส่งใบงานโครงงานแบบ Real-time</p>
+                </div>
+            </div>
+
+            <!-- Role Switcher & Status -->
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <div id="connection-status" class="flex items-center space-x-1.5 text-xs bg-indigo-800/60 px-3 py-1.5 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" id="status-dot"></span>
+                    <span id="status-text">กำลังเชื่อมต่อ...</span>
+                </div>
+
+                <div class="bg-indigo-800 p-1 rounded-xl flex text-xs sm:text-sm font-medium">
+                    <button id="btn-role-student" onclick="switchRole('student')" class="px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-sm transition-all">
+                        👨‍🎓 นักเรียน
+                    </button>
+                    <button id="btn-role-teacher" onclick="requestTeacherAccess()" class="px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition-all flex items-center space-x-1">
+                        <span>👩‍🏫 คุณครู</span>
+                        <svg id="teacher-lock-icon" class="w-3.5 h-3.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- ==================== STUDENT VIEW ==================== -->
+        <div id="student-view" class="space-y-6">
+            
+            <!-- Group Setup / Login Card -->
+            <div id="group-setup-card" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto mt-4">
+                <div class="text-center mb-5">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">ระบบงานโครงงานนักเรียน</h2>
+                    <p class="text-sm text-slate-500 mt-1">เลือก "ลงทะเบียนกลุ่มใหม่" สำหรับการเข้าครั้งแรก หรือ "เข้าสู่ระบบ" หากเคยลงทะเบียนแล้ว</p>
+                </div>
+
+                <!-- Auth Mode Tabs -->
+                <div class="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-xl mb-6">
+                    <button type="button" id="tab-login" onclick="switchAuthTab('login')" class="py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all">
+                        🔑 เข้าสู่ระบบ (เคยลงทะเบียนแล้ว)
+                    </button>
+                    <button type="button" id="tab-register" onclick="switchAuthTab('register')" class="py-2.5 px-4 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all">
+                        📝 ลงทะเบียนกลุ่มใหม่ (เข้าครั้งแรก)
+                    </button>
+                </div>
+
+                <!-- 1. LOGIN FORM (Returning Students) -->
+                <form id="login-form" onsubmit="handleGroupLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">เลือกกลุ่มโครงงานของคุณ *</label>
+                        <select id="login-group-select" required class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white text-sm">
+                            <option value="">-- กำลังโหลดรายชื่อกลุ่ม... --</option>
+                        </select>
+                        <p id="no-groups-hint" class="text-xs text-amber-600 mt-1.5 hidden">⚠️ ยังไม่มีกลุ่มลงทะเบียนในระบบ กรุณากดแท็บ <b>"ลงทะเบียนกลุ่มใหม่"</b> ด้านบนก่อนครับ</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">รหัสผ่านของกลุ่ม *</label>
+                        <input type="password" id="login-password" required placeholder="กรอกรหัสผ่านที่ตั้งไว้ตอนลงทะเบียน" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2">
+                        <span>เข้าสู่พื้นที่ทำงานโครงงาน</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                    </button>
+                </form>
+
+                <!-- 2. REGISTER FORM (First-time Students) -->
+                <form id="register-form" onsubmit="handleGroupRegister(event)" class="space-y-4 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">ระดับชั้น *</label>
+                            <select id="reg-grade" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
+                                <option value="ม.4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+                                <option value="ม.5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อกลุ่มโครงงาน *</label>
+                            <input type="text" id="reg-group-name" required placeholder="เช่น กลุ่มนักวิทย์รุ่นเยาว์" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                        </div>
+                    </div>
+                    <div class="space-y-2.5">
+                        <label class="block text-sm font-medium text-slate-700">รายชื่อสมาชิกในกลุ่ม (1 - 3 คน) *</label>
+                        <div>
+                            <input type="text" id="reg-member-1" required placeholder="คนที่ 1 (หัวหน้ากลุ่ม): เช่น นายสมชาย ใจดี เลขที่ 1" class="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <input type="text" id="reg-member-2" placeholder="คนที่ 2: เช่น นางสาวสมหญิง รักเรียน เลขที่ 2 (ถ้ามี)" class="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                        </div>
+                        <div>
+                            <input type="text" id="reg-member-3" placeholder="คนที่ 3: เช่น นายมานะ ขยันยิ่ง เลขที่ 3 (ถ้ามี)" class="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50/70 p-4 rounded-xl border border-indigo-100">
+                        <label class="block text-sm font-bold text-indigo-900 mb-1">ตั้งรหัสผ่านสำหรับกลุ่ม (ใช้เข้าสู่ระบบในครั้งถัดไป) *</label>
+                        <input type="text" id="reg-password" required minlength="4" maxlength="12" placeholder="ตั้งรหัสผ่าน 4-12 ตัวอักษร เช่น 1234 หรือ sci401" class="w-full px-4 py-2.5 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm">
+                        <p class="text-xs text-indigo-600 mt-1">* โปรดจำรหัสผ่านนี้ไว้ เพื่อใช้เข้าทำงานต่อในครั้งหน้าโดยไม่ต้องกรอกชื่อสมาชิกใหม่</p>
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2">
+                        <span>✅ ยืนยันการลงทะเบียนและเริ่มทำใบงาน</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Student Workspace (Hidden until group is selected) -->
+            <div id="student-workspace" class="hidden space-y-6">
+                
+                <!-- Group Info Banner -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span id="display-grade" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-lg">ม.4</span>
+                            <h2 id="display-group-name" class="text-lg sm:text-xl font-bold text-slate-800">ชื่อกลุ่ม</h2>
+                        </div>
+                        <p id="display-members" class="text-xs sm:text-sm text-slate-500 mt-1">สมาชิก: ---</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <div class="text-xs text-slate-500">ความคืบหน้าทั้งหมด</div>
+                            <div class="text-lg font-bold text-indigo-600" id="student-progress-text">0 / 10 ใบงาน</div>
+                        </div>
+                        <button onclick="logoutGroup()" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors" title="เปลี่ยนกลุ่ม">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5 Steps Navigation & Worksheet Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Left Sidebar: 10 Worksheets List -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                            <h3 class="font-bold text-slate-800 mb-3 px-1">รายการใบงาน (5 ขั้นตอน)</h3>
+                            <div id="worksheet-nav-list" class="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
+                                <!-- Rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Main Area: Active Worksheet Form -->
+                    <div class="lg:col-span-8">
+                        <div id="worksheet-editor-card" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-8">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TEACHER VIEW ==================== -->
+        <div id="teacher-view" class="hidden space-y-6">
+            
+            <!-- Teacher Session Bar -->
+            <div class="bg-indigo-900 text-white px-5 py-3 rounded-2xl shadow-sm flex items-center justify-between">
+                <div class="flex items-center space-x-2 text-sm">
+                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full text-xs font-semibold">🔓 ยืนยันตัวตนคุณครูแล้ว</span>
+                    <span class="hidden sm:inline text-indigo-200">สิทธิ์การเข้าถึง: ดูและตรวจใบงานของนักเรียนทุกกลุ่ม</span>
+                </div>
+                <button onclick="lockTeacherSession()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <span>ล็อกหน้าคุณครู</span>
+                </button>
+            </div>
+
+            <!-- Teacher Header Stats -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">กลุ่มโครงงานทั้งหมด</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="stat-total-groups">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">รอคุณครูตรวจ</p>
+                    <p class="text-2xl font-bold text-amber-600 mt-1" id="stat-pending-review">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">ผ่านการประเมินแล้ว</p>
+                    <p class="text-2xl font-bold text-emerald-600 mt-1" id="stat-approved">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">ต้องแก้ไข</p>
+                    <p class="text-2xl font-bold text-rose-600 mt-1" id="stat-revision">0</p>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm font-medium text-slate-700">กรองระดับชั้น:</span>
+                        <select id="teacher-grade-filter" onchange="renderTeacherDashboard()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="ALL">ทั้งหมด (ม.4 และ ม.5)</option>
+                            <option value="ม.4">เฉพาะ ม.4</option>
+                            <option value="ม.5">เฉพาะ ม.5</option>
+                        </select>
+                    </div>
+                    <button onclick="exportAllDataBackup()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-xl border border-slate-300 transition-colors">
+                        📥 ดาวน์โหลดไฟล์สำรองข้อมูล
+                    </button>
+                </div>
+                <div class="text-xs text-slate-500 flex items-center space-x-3">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-slate-200 mr-1"></span>ยังไม่ส่ง</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1"></span>รอตรวจ</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1"></span>แก้ไข</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span>ผ่าน</span>
+                </div>
+            </div>
+
+            <!-- Groups Progress Matrix / Cards -->
+            <div id="teacher-groups-container" class="space-y-4">
+                <!-- Rendered by JS -->
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Teacher Passcode Modal -->
+    <div id="teacher-auth-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-4">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-indigo-100 text-indigo-600 mx-auto">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">พื้นที่เฉพาะคุณครูผู้สอน</h3>
+                <p class="text-xs text-slate-500 mt-1">กรุณากรอกรหัสผ่านคุณครูเพื่อเข้าตรวจงานของนักเรียน</p>
+            </div>
+            <form onsubmit="verifyTeacherPasscode(event)" class="space-y-3">
+                <input type="password" id="teacher-passcode-input" inputmode="numeric" maxlength="10" required placeholder="กรอกรหัสผ่าน..." class="w-full text-center tracking-widest text-lg font-bold px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                <p id="teacher-auth-error" class="text-xs text-rose-600 font-medium hidden">❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</p>
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" onclick="closeTeacherAuthModal()" class="w-1/2 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 font-medium text-sm">ยกเลิก</button>
+                    <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm">เข้าสู่ระบบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Teacher Review Modal -->
+    <div id="review-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <span id="modal-group-badge" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md">GROUP</span>
+                    <h3 id="modal-worksheet-title" class="font-bold text-lg text-slate-800 mt-1">ชื่อใบงาน</h3>
+                </div>
+                <button onclick="closeReviewModal()" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div id="modal-content-body" class="p-6 overflow-y-auto space-y-4 flex-grow">
+                <!-- Student answers rendered here -->
+            </div>
+
+            <div class="p-6 bg-slate-50 border-t border-slate-200 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ข้อเสนอแนะจากคุณครู (Feedback)</label>
+                    <textarea id="modal-feedback-input" rows="2" placeholder="พิมพ์คำแนะนำหรือจุดที่ต้องแก้ไขให้นักเรียน..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"></textarea>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <button onclick="submitTeacherReview('revision')" class="px-4 py-2 rounded-xl bg-rose-100 text-rose-700 hover:bg-rose-200 font-medium text-sm transition-colors">
+                        ⚠️ ส่งกลับให้แก้ไข
+                    </button>
+                    <button onclick="submitTeacherReview('approved')" class="px-5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-medium text-sm shadow-sm transition-colors">
+                        ✅ อนุมัติ (ผ่าน)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 1. Initialize Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'project-hub-m4-m5-permanent';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const LOCAL_STORAGE_KEY = 'project_hub_m4_m5_data_v1';
+
+        let app, auth, db;
+        let currentUser = null;
+        let useCloudSync = false;
+
+        // Global State
+        let currentRole = 'student'; // 'student' | 'teacher'
+        let isTeacherAuthenticated = false;
+        const TEACHER_PASSCODE = "198020";
+        let currentGroupId = null;
+        let activeWorksheetId = 1;
+        let allGroupsData = {}; // Map of groupId -> group object
+        let currentModalTarget = { groupId: null, wsId: null };
+
+        // 10 Worksheets Curriculum Definition
+        const WORKSHEETS = [
+            {
+                id: 1,
+                step: "ขั้นตอนที่ 1: คิดและเลือกหัวข้อ",
+                title: "ใบงานที่ 1: สำรวจปัญหาและระดมสมอง",
+                desc: "ตั้งคำถามจากสิ่งที่พบเห็นในชีวิตประจำวัน ชุมชน หรือความสนใจ (5W1H)",
+                fields: [
+                    { key: "problems", label: "1. ประเด็นปัญหาที่พบในชีวิตประจำวัน / โรงเรียน / ชุมชน (ระบุ 3-5 ข้อ)", type: "textarea", placeholder: "- ปัญหาขยะพลาสติกในโรงอาหาร...\n- ปัญหาการลืมรดน้ำต้นไม้..." },
+                    { key: "target_group", label: "2. กลุ่มเป้าหมายที่ได้รับผลกระทบจากปัญหานี้คือใคร?", type: "text", placeholder: "เช่น นักเรียนระดับชั้นมัธยมศึกษา, เกษตรกรในชุมชน" },
+                    { key: "interest_reason", label: "3. เหตุผลที่กลุ่มสนใจประเด็นเหล่านี้", type: "textarea", placeholder: "อธิบายความสำคัญและความเร่งด่วนของปัญหา..." }
+                ]
+            },
+            {
+                id: 2,
+                step: "ขั้นตอนที่ 1: คิดและเลือกหัวข้อ",
+                title: "ใบงานที่ 2: วิเคราะห์ความเป็นไปได้และเลือกหัวข้อ",
+                desc: "ประเมินหัวข้อที่สนใจด้วยเกณฑ์เวลา งบประมาณ ความปลอดภัย เพื่อคัดเลือกหัวข้อที่ดีที่สุด",
+                fields: [
+                    { key: "candidate_topics", label: "1. เปรียบเทียบหัวข้อที่สนใจ 3 หัวข้อ (ข้อดี / ข้อจำกัด)", type: "textarea", placeholder: "หัวข้อที่ 1: ... (ข้อดี: ..., ข้อจำกัด: ...)\nหัวข้อที่ 2: ..." },
+                    { key: "selected_topic", label: "2. ชื่อเรื่องโครงงานที่ตัดสินใจเลือก (ฉบับร่าง)", type: "text", placeholder: "ระบุชื่อโครงงานที่ชัดเจน..." },
+                    { key: "feasibility_check", label: "3. ยืนยันความพร้อม (งบประมาณ, ระยะเวลา, ความปลอดภัย, ครูที่ปรึกษา)", type: "textarea", placeholder: "ระบุงบประมาณโดยประมาณ แหล่งวัสดุอุปกรณ์ และมาตรการความปลอดภัย..." }
+                ]
+            },
+            {
+                id: 3,
+                step: "ขั้นตอนที่ 2: ศึกษาเอกสารและวางแผน",
+                title: "ใบงานที่ 3: บันทึกการทบทวนวรรณกรรม",
+                desc: "สืบค้นงานวิจัยหรือโครงงานที่เกี่ยวข้อง พร้อมฝึกการอ้างอิงรูปแบบ APA",
+                fields: [
+                    { key: "keywords", label: "1. คำสำคัญ (Keywords) ที่ใช้ในการสืบค้นข้อมูล", type: "text", placeholder: "เช่น สารสกัดสมุนไพร, ไบโอพลาสติก, IoT เกษตร" },
+                    { key: "literature_summary", label: "2. สรุปสาระสำคัญจากเอกสาร / งานวิจัยที่เกี่ยวข้อง (อย่างน้อย 2 เรื่อง)", type: "textarea", placeholder: "เรื่องที่ 1: ผู้วิจัยพบว่า...\nเรื่องที่ 2: ..." },
+                    { key: "references", label: "3. รายการอ้างอิง (รูปแบบ APA)", type: "textarea", placeholder: "ชื่อผู้แต่ง. (ปีที่พิมพ์). ชื่อเรื่อง. แหล่งที่มา/URL." }
+                ]
+            },
+            {
+                id: 4,
+                step: "ขั้นตอนที่ 2: ศึกษาเอกสารและวางแผน",
+                title: "ใบงานที่ 4: กำหนดตัวแปรและสมมติฐาน",
+                desc: "ระบุตัวแปรต้น ตัวแปรตาม ตัวแปรควบคุม และตั้งสมมติฐาน (หรือขอบเขตชิ้นงาน)",
+                fields: [
+                    { key: "project_type", label: "1. ประเภทของโครงงาน", type: "text", placeholder: "โครงงานทดลอง / โครงงานสิ่งประดิษฐ์ / โครงงานสำรวจ / โครงงานทฤษฎี" },
+                    { key: "variables", label: "2. ตัวแปรที่ศึกษา (ตัวแปรต้น / ตัวแปรตาม / ตัวแปรควบคุม)", type: "textarea", placeholder: "- ตัวแปรต้น: ...\n- ตัวแปรตาม: ...\n- ตัวแปรควบคุม: ..." },
+                    { key: "hypothesis", label: "3. สมมติฐานการวิจัย (หรือ คุณลักษณะ/ขอบเขตของชิ้นงาน)", type: "textarea", placeholder: "ถ้า... (ตัวแปรต้น)... แล้ว... (ตัวแปรตาม)..." }
+                ]
+            },
+            {
+                id: 5,
+                step: "ขั้นตอนที่ 2: ศึกษาเอกสารและวางแผน",
+                title: "ใบงานที่ 5: เค้าโครงโครงงานและปฏิทินงาน",
+                desc: "ร่างเค้าโครงย่อและแบ่งหน้าที่ความรับผิดชอบภายในกลุ่ม (Gantt Chart)",
+                fields: [
+                    { key: "objectives", label: "1. วัตถุประสงค์ของโครงงาน (ระบุเป็นข้อๆ)", type: "textarea", placeholder: "1. เพื่อศึกษา...\n2. เพื่อเปรียบเทียบ...\n3. เพื่อประเมินประสิทธิภาพ..." },
+                    { key: "methodology", label: "2. สรุปขั้นตอนวิธีดำเนินการและวัสดุอุปกรณ์หลัก", type: "textarea", placeholder: "อธิบายขั้นตอนการทดลองหรือการสร้างชิ้นงานโดยย่อ..." },
+                    { key: "timeline", label: "3. แผนการปฏิบัติงานและผู้รับผิดชอบ (สัปดาห์ที่ 1 - 12)", type: "textarea", placeholder: "สัปดาห์ที่ 1-2: สืบค้นข้อมูล (รับผิดชอบโดย...)\nสัปดาห์ที่ 3-6: ลงมือทดลอง..." }
+                ]
+            },
+            {
+                id: 6,
+                step: "ขั้นตอนที่ 3: ลงมือปฏิบัติและเก็บข้อมูล",
+                title: "ใบงานที่ 6: สมุดบันทึกการปฏิบัติงาน (Logbook)",
+                desc: "บันทึกรายสัปดาห์ว่าทำอะไรไปบ้าง พบปัญหาอะไร และแก้ไขอย่างไร",
+                fields: [
+                    { key: "work_done", label: "1. กิจกรรมที่ดำเนินการไปแล้ว (ระบุวันที่และรายละเอียด)", type: "textarea", placeholder: "วันที่ ... : เตรียมสารละลายและทดสอบชุดควบคุม..." },
+                    { key: "obstacles", label: "2. ปัญหาและอุปสรรคที่พบระหว่างปฏิบัติงาน", type: "textarea", placeholder: "เช่น ผลการทดลองคลาดเคลื่อนเนื่องจากอุณหภูมิไม่คงที่..." },
+                    { key: "solutions", label: "3. แนวทางการแก้ไขปัญหาและแผนงานในสัปดาห์ถัดไป", type: "textarea", placeholder: "ปรับเปลี่ยนภาชนะทดลองและควบคุมอุณหภูมิ..." }
+                ]
+            },
+            {
+                id: 7,
+                step: "ขั้นตอนที่ 3: ลงมือปฏิบัติและเก็บข้อมูล",
+                title: "ใบงานที่ 7: แบบบันทึกผลการทดลอง / ทดสอบ",
+                desc: "บันทึกข้อมูลดิบที่ได้จากการทดลอง การสำรวจ หรือการทดสอบประสิทธิภาพ",
+                fields: [
+                    { key: "raw_data", label: "1. บันทึกข้อมูลดิบ / ผลการทดลอง (ระบุหน่วยวัดให้ชัดเจน)", type: "textarea", placeholder: "ชุดทดลองที่ 1 (ครั้งที่ 1, 2, 3): ...\nชุดควบคุม (ครั้งที่ 1, 2, 3): ..." },
+                    { key: "observations", label: "2. สิ่งที่สังเกตเห็นเพิ่มเติมเชิงคุณภาพ (สี กลิ่น ลักษณะทางกายภาพ)", type: "textarea", placeholder: "บันทึกการเปลี่ยนแปลงที่สังเกตเห็นด้วยตาเปล่า..." },
+                    { key: "evidence_link", label: "3. ลิงก์รูปภาพถ่าย / วิดีโอหลักฐานการทดลอง (Google Drive / YouTube)", type: "text", placeholder: "https://drive.google.com/..." }
+                ]
+            },
+            {
+                id: 8,
+                step: "ขั้นตอนที่ 4: วิเคราะห์ผลและสรุปผล",
+                title: "ใบงานที่ 8: การวิเคราะห์ข้อมูลและอภิปรายผล",
+                desc: "ประมวลผลทางสถิติและอภิปรายผลโดยเชื่อมโยงกับทฤษฎีหรือสมมติฐาน",
+                fields: [
+                    { key: "stat_summary", label: "1. สรุปผลการวิเคราะห์ข้อมูลทางสถิติ (ค่าเฉลี่ย, ร้อยละ, S.D.)", type: "textarea", placeholder: "ชุดทดลองที่ 1 มีค่าเฉลี่ยเท่ากับ ... (S.D. = ...) ซึ่งสูงกว่าชุดควบคุมคิดเป็นร้อยละ ..." },
+                    { key: "hypothesis_test", label: "2. ผลการตรวจสอบสมมติฐาน (เป็นไปตามสมมติฐานหรือไม่ อย่างไร)", type: "text", placeholder: "เป็นไปตามสมมติฐานที่ตั้งไว้ เนื่องจาก..." },
+                    { key: "discussion", label: "3. การอภิปรายผล (เชื่อมโยงกับหลักการทางวิทยาศาสตร์หรืองานวิจัยในใบงานที่ 3)", type: "textarea", placeholder: "จากผลการทดลองสอดคล้องกับงานวิจัยของ... ที่อธิบายว่า..." }
+                ]
+            },
+            {
+                id: 9,
+                step: "ขั้นตอนที่ 5: เขียนรายงานและนำเสนอ",
+                title: "ใบงานที่ 9: ตรวจสอบความสมบูรณ์รายงาน 5 บท",
+                desc: "ตรวจสอบองค์ประกอบของรูปเล่มรายงานฉบับสมบูรณ์และแนบลิงก์ไฟล์เอกสาร",
+                fields: [
+                    { key: "checklist_status", label: "1. ตรวจสอบองค์ประกอบครบถ้วน (ปก, บทคัดย่อ, บทที่ 1-5, บรรณานุกรม, ภาคผนวก)", type: "textarea", placeholder: "[✓] ส่วนหน้าครบถ้วน\n[✓] บทที่ 1-3 ตรงตามเค้าโครง\n[✓] บทที่ 4-5 วิเคราะห์และสรุปครบถ้วน..." },
+                    { key: "abstract_draft", label: "2. บทคัดย่อ (Abstract) ฉบับย่อ", type: "textarea", placeholder: "โครงงานนี้มีวัตถุประสงค์เพื่อ... วิธีดำเนินการ... ผลการศึกษาพบว่า..." },
+                    { key: "report_link", label: "3. ลิงก์ไฟล์รายงานฉบับสมบูรณ์ (Google Docs / PDF)", type: "text", placeholder: "https://docs.google.com/..." }
+                ]
+            },
+            {
+                id: 10,
+                step: "ขั้นตอนที่ 5: เขียนรายงานและนำเสนอ",
+                title: "ใบงานที่ 10: ออกแบบสื่อนำเสนอและบทพูด",
+                desc: "วางโครงสร้างสไลด์นำเสนอหรือโปสเตอร์วิชาการ และเตรียมตอบคำถามกรรมการ",
+                fields: [
+                    { key: "pitch_script", label: "1. สคริปต์การนำเสนอสรุปใจความสำคัญ (Elevator Pitch 3-5 นาที)", type: "textarea", placeholder: "สวัสดีครับ/ค่ะ พวกเรากลุ่ม... ปัญหาที่เราพบคือ... นวัตกรรมของเราช่วยแก้ปัญหาโดย..." },
+                    { key: "qa_prep", label: "2. เตรียมคำถามที่คาดว่าจะถูกถามจากคณะกรรมการ (พร้อมแนวคำตอบ)", type: "textarea", placeholder: "คำถาม 1: จุดเด่นที่แตกต่างจากที่มีอยู่เดิมคืออะไร?\nแนวคำตอบ: ..." },
+                    { key: "slides_link", label: "3. ลิงก์สื่อนำเสนอ (Canva / Google Slides / โปสเตอร์)", type: "text", placeholder: "https://www.canva.com/..." }
+                ]
+            }
+        ];
+
+        // Initialize Firebase Auth & Firestore with Persistent Storage Guarantee
+        async function initBackend() {
+            // โหลดข้อมูลสำรองจากเครื่องขึ้นมาก่อนทันทีเพื่อให้ไม่ว่างเปล่า
+            loadFromPersistentLocal();
+
+            if (!firebaseConfig) {
+                useCloudSync = false;
+                updateConnectionStatus('บันทึกถาวรในเบราว์เซอร์แล้ว', 'bg-emerald-400');
+                setupCrossTabSync();
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Rule 3: Auth Before Queries
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        useCloudSync = true;
+                        updateConnectionStatus('เชื่อมต่อ Cloud Real-time แล้ว', 'bg-emerald-400');
+                        subscribeToGroups();
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                useCloudSync = false;
+                updateConnectionStatus('บันทึกถาวรในเบราว์เซอร์แล้ว', 'bg-emerald-400');
+                setupCrossTabSync();
+            }
+        }
+
+        function saveToPersistentLocal() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allGroupsData));
+            } catch (e) {
+                console.warn("Storage warning:", e);
+            }
+        }
+
+        function loadFromPersistentLocal() {
+            try {
+                const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (saved) {
+                    allGroupsData = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.warn("Read storage warning:", e);
+            }
+            refreshAllViews();
+        }
+
+        // Real-time sync across tabs/windows on the same browser
+        function setupCrossTabSync() {
+            window.addEventListener('storage', (e) => {
+                if (e.key === LOCAL_STORAGE_KEY && e.newValue) {
+                    allGroupsData = JSON.parse(e.newValue);
+                    refreshAllViews();
+                }
+            });
+        }
+
+        function refreshAllViews() {
+            renderExistingGroupsList();
+            if (currentGroupId && allGroupsData[currentGroupId]) {
+                renderStudentWorkspace();
+            }
+            if (currentRole === 'teacher') {
+                renderTeacherDashboard();
+            }
+        }
+
+        function updateConnectionStatus(text, dotColorClass) {
+            const dot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            dot.className = `w-2 h-2 rounded-full ${dotColorClass}`;
+            statusText.textContent = text;
+        }
+
+        // Subscribe to Firestore Public Collection (Rule 1 & 2)
+        function subscribeToGroups() {
+            if (!currentUser || !useCloudSync) return;
+
+            const groupsCol = collection(db, 'artifacts', appId, 'public', 'data', 'project_groups');
+            
+            onSnapshot(groupsCol, (snapshot) => {
+                const updatedData = {};
+                snapshot.forEach((docSnap) => {
+                    updatedData[docSnap.id] = docSnap.data();
+                });
+                allGroupsData = updatedData;
+                saveToPersistentLocal();
+                refreshAllViews();
+            }, (error) => {
+                console.error("Firestore Snapshot Error:", error);
+                useCloudSync = false;
+                updateConnectionStatus('บันทึกถาวรในเบราว์เซอร์แล้ว', 'bg-amber-400');
+            });
+        }
+
+        // ==================== UI & NAVIGATION FUNCTIONS ====================
+
+        window.requestTeacherAccess = function() {
+            if (isTeacherAuthenticated) {
+                switchRole('teacher');
+            } else {
+                document.getElementById('teacher-passcode-input').value = '';
+                document.getElementById('teacher-auth-error').classList.add('hidden');
+                document.getElementById('teacher-auth-modal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('teacher-passcode-input').focus(), 100);
+            }
+        };
+
+        window.closeTeacherAuthModal = function() {
+            document.getElementById('teacher-auth-modal').classList.add('hidden');
+        };
+
+        window.verifyTeacherPasscode = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('teacher-passcode-input').value.trim();
+            if (input === TEACHER_PASSCODE) {
+                isTeacherAuthenticated = true;
+                document.getElementById('teacher-lock-icon').classList.add('hidden');
+                closeTeacherAuthModal();
+                switchRole('teacher');
+                showToast("ยืนยันรหัสคุณครูสำเร็จ", "success");
+            } else {
+                document.getElementById('teacher-auth-error').classList.remove('hidden');
+                document.getElementById('teacher-passcode-input').value = '';
+                document.getElementById('teacher-passcode-input').focus();
+            }
+        };
+
+        window.lockTeacherSession = function() {
+            isTeacherAuthenticated = false;
+            document.getElementById('teacher-lock-icon').classList.remove('hidden');
+            switchRole('student');
+            showToast("ล็อกหน้าคุณครูเรียบร้อยแล้ว", "success");
+        };
+
+        window.switchRole = function(role) {
+            if (role === 'teacher' && !isTeacherAuthenticated) {
+                requestTeacherAccess();
+                return;
+            }
+            currentRole = role;
+            const btnStudent = document.getElementById('btn-role-student');
+            const btnTeacher = document.getElementById('btn-role-teacher');
+            const viewStudent = document.getElementById('student-view');
+            const viewTeacher = document.getElementById('teacher-view');
+
+            if (role === 'student') {
+                btnStudent.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-sm transition-all";
+                btnTeacher.className = "px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition-all flex items-center space-x-1";
+                viewStudent.classList.remove('hidden');
+                viewTeacher.classList.add('hidden');
+                if (currentGroupId) renderStudentWorkspace();
+            } else {
+                btnTeacher.className = "px-3 py-1.5 rounded-lg bg-white text-indigo-700 shadow-sm transition-all flex items-center space-x-1";
+                btnStudent.className = "px-3 py-1.5 rounded-lg text-indigo-100 hover:text-white transition-all";
+                viewTeacher.classList.remove('hidden');
+                viewStudent.classList.add('hidden');
+                renderTeacherDashboard();
+            }
+        };
+
+        function renderExistingGroupsList() {
+            const groups = Object.values(allGroupsData);
+            const selectEl = document.getElementById('login-group-select');
+            const hintEl = document.getElementById('no-groups-hint');
+
+            if (!selectEl) return;
+
+            if (groups.length === 0) {
+                selectEl.innerHTML = `<option value="">-- ยังไม่มีกลุ่มลงทะเบียนในระบบ --</option>`;
+                if (hintEl) hintEl.classList.remove('hidden');
+                return;
+            }
+
+            if (hintEl) hintEl.classList.add('hidden');
+            const currentSelection = selectEl.value;
+            
+            // เรียงตามระดับชั้นและชื่อกลุ่ม
+            groups.sort((a, b) => (a.grade + a.groupName).localeCompare(b.grade + b.groupName, 'th'));
+
+            selectEl.innerHTML = `<option value="">-- คลิกเพื่อเลือกกลุ่มของคุณ (${groups.length} กลุ่ม) --</option>` +
+                groups.map(g => `<option value="${g.groupId}">${g.grade} | ${escapeHtml(g.groupName)}</option>`).join('');
+            
+            if (currentSelection && allGroupsData[currentSelection]) {
+                selectEl.value = currentSelection;
+            }
+        }
+
+        window.switchAuthTab = function(mode) {
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+            const formLogin = document.getElementById('login-form');
+            const formRegister = document.getElementById('register-form');
+
+            if (mode === 'login') {
+                tabLogin.className = "py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all";
+                tabRegister.className = "py-2.5 px-4 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all";
+                formLogin.classList.remove('hidden');
+                formRegister.classList.add('hidden');
+            } else {
+                tabRegister.className = "py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all";
+                tabLogin.className = "py-2.5 px-4 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all";
+                formRegister.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+            }
+        };
+
+        // 1. Handle Returning Student Login
+        window.handleGroupLogin = function(e) {
+            e.preventDefault();
+            const selectedId = document.getElementById('login-group-select').value;
+            const passwordInput = document.getElementById('login-password').value.trim();
+
+            if (!selectedId || !allGroupsData[selectedId]) {
+                showToast("กรุณาเลือกกลุ่มโครงงานของคุณ", "error");
+                return;
+            }
+
+            const group = allGroupsData[selectedId];
+            if (group.password && group.password !== passwordInput) {
+                showToast("รหัสผ่านของกลุ่มไม่ถูกต้อง กรุณาลองใหม่", "error");
+                return;
+            }
+
+            currentGroupId = selectedId;
+            document.getElementById('login-password').value = '';
+            document.getElementById('group-setup-card').classList.add('hidden');
+            document.getElementById('student-workspace').classList.remove('hidden');
+            renderStudentWorkspace();
+            showToast(`ยินดีต้อนรับกลับ กลุ่ม ${group.groupName}`, "success");
+        };
+
+        // 2. Handle First-time Student Registration
+        window.handleGroupRegister = async function(e) {
+            e.preventDefault();
+            const grade = document.getElementById('reg-grade').value;
+            const groupName = document.getElementById('reg-group-name').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            
+            const m1 = document.getElementById('reg-member-1').value.trim();
+            const m2 = document.getElementById('reg-member-2').value.trim();
+            const m3 = document.getElementById('reg-member-3').value.trim();
+            const members = [m1, m2, m3]
+                .filter(m => m.length > 0)
+                .map((m, idx) => `${idx + 1}. ${m}`)
+                .join('\n');
+
+            if (!groupName || !password) {
+                showToast("กรุณากรอกชื่อกลุ่มและตั้งรหัสผ่านให้ครบถ้วน", "error");
+                return;
+            }
+
+            // ตรวจสอบว่ามีชื่อกลุ่มซ้ำในระดับชั้นเดียวกันหรือไม่
+            const duplicate = Object.values(allGroupsData).find(
+                g => g.grade === grade && g.groupName.toLowerCase() === groupName.toLowerCase()
+            );
+            if (duplicate) {
+                showToast("ชื่อกลุ่มนี้ลงทะเบียนไว้แล้ว กรุณาไปที่แท็บ 'เข้าสู่ระบบ'", "error");
+                switchAuthTab('login');
+                document.getElementById('login-group-select').value = duplicate.groupId;
+                return;
+            }
+
+            const rawId = 'GRP-' + Date.now().toString(36).toUpperCase();
+            const groupPayload = {
+                groupId: rawId,
+                grade: grade,
+                groupName: groupName,
+                members: members,
+                password: password,
+                createdAt: new Date().toISOString(),
+                worksheets: {}
+            };
+
+            allGroupsData[rawId] = groupPayload;
+            saveToPersistentLocal();
+
+            if (useCloudSync && currentUser) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'project_groups', rawId);
+                    await setDoc(docRef, groupPayload, { merge: true });
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            currentGroupId = rawId;
+            document.getElementById('register-form').reset();
+            document.getElementById('group-setup-card').classList.add('hidden');
+            document.getElementById('student-workspace').classList.remove('hidden');
+            renderExistingGroupsList();
+            renderStudentWorkspace();
+            showToast(`ลงทะเบียนกลุ่ม ${groupName} สำเร็จ!`, "success");
+        };
+
+        window.logoutGroup = function() {
+            currentGroupId = null;
+            document.getElementById('student-workspace').classList.add('hidden');
+            document.getElementById('group-setup-card').classList.remove('hidden');
+            switchAuthTab('login');
+            renderExistingGroupsList();
+        };
+
+        // ==================== STUDENT WORKSPACE RENDERING ====================
+
+        function renderStudentWorkspace() {
+            const group = allGroupsData[currentGroupId];
+            if (!group) return;
+
+            // Header info
+            document.getElementById('display-grade').textContent = group.grade;
+            document.getElementById('display-group-name').textContent = group.groupName;
+            document.getElementById('display-members').textContent = `สมาชิก: ${group.members.replace(/\n/g, ', ')}`;
+
+            // Calculate progress
+            const wsData = group.worksheets || {};
+            let completedCount = 0;
+            WORKSHEETS.forEach(w => {
+                const st = wsData[w.id]?.status;
+                if (st === 'submitted' || st === 'approved') completedCount++;
+            });
+            document.getElementById('student-progress-text').textContent = `${completedCount} / 10 ใบงาน`;
+
+            // Render Left Nav List
+            const navList = document.getElementById('worksheet-nav-list');
+            let currentStepHeader = "";
+            let navHtml = "";
+
+            WORKSHEETS.forEach(w => {
+                if (w.step !== currentStepHeader) {
+                    currentStepHeader = w.step;
+                    navHtml += `<div class="text-xs font-bold text-indigo-600 uppercase tracking-wider pt-3 pb-1 px-2">${currentStepHeader}</div>`;
+                }
+
+                const record = wsData[w.id] || { status: 'draft' };
+                const isActive = w.id === activeWorksheetId;
+                const badge = getStatusBadge(record.status);
+
+                navHtml += `
+                    <button onclick="selectWorksheet(${w.id})" class="w-full text-left p-3 rounded-xl border transition-all flex items-start justify-between gap-2 ${isActive ? 'bg-indigo-50 border-indigo-300 shadow-sm' : 'bg-white border-slate-100 hover:bg-slate-50'}">
+                        <div class="text-sm font-medium ${isActive ? 'text-indigo-900' : 'text-slate-700'} leading-snug">
+                            ${w.title}
+                        </div>
+                        <div class="shrink-0 mt-0.5">${badge}</div>
+                    </button>
+                `;
+            });
+            navList.innerHTML = navHtml;
+
+            // Render Right Active Worksheet Editor
+            renderActiveWorksheetEditor();
+        }
+
+        window.selectWorksheet = function(wsId) {
+            activeWorksheetId = wsId;
+            renderStudentWorkspace();
+        };
+
+        function renderActiveWorksheetEditor() {
+            const group = allGroupsData[currentGroupId];
+            const ws = WORKSHEETS.find(w => w.id === activeWorksheetId);
+            const record = (group.worksheets && group.worksheets[ws.id]) || { status: 'draft', answers: {}, feedback: '' };
+
+            const editorCard = document.getElementById('worksheet-editor-card');
+            
+            // Teacher Feedback Alert Box (if any)
+            let feedbackHtml = '';
+            const isReviewed = record.status === 'revision' || record.status === 'approved';
+            if (isReviewed || record.feedback) {
+                const isRev = record.status === 'revision';
+                const reviewedTime = record.reviewedAt ? ` (${new Date(record.reviewedAt).toLocaleString('th-TH')})` : '';
+                feedbackHtml = `
+                    <div class="mb-6 p-4 rounded-xl border-2 ${isRev ? 'bg-rose-50 border-rose-300 text-rose-900' : 'bg-emerald-50 border-emerald-300 text-emerald-900'}">
+                        <div class="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+                            <span class="inline-flex items-center space-x-1.5 font-bold text-sm">
+                                <span>${isRev ? '👁️ ครูตรวจแล้ว • ส่งกลับให้แก้ไขและส่งใหม่' : '👁️ ครูตรวจแล้ว • ผ่านการประเมิน'}</span>
+                            </span>
+                            <span class="text-xs opacity-75">${reviewedTime}</span>
+                        </div>
+                        <p class="text-sm bg-white/70 p-3 rounded-lg border ${isRev ? 'border-rose-200' : 'border-emerald-200'}">
+                            <span class="font-semibold">ข้อเสนอแนะจากคุณครู:</span> ${record.feedback ? escapeHtml(record.feedback) : (isRev ? 'กรุณาปรับปรุงรายละเอียดตามที่แนะนำแล้วกดส่งงานใหม่อีกครั้ง' : 'ทำได้ดีมาก ผ่านเกณฑ์การประเมิน')}
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Form Fields
+            const fieldsHtml = ws.fields.map(f => {
+                const val = (record.answers && record.answers[f.key]) || '';
+                if (f.type === 'textarea') {
+                    return `
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">${f.label}</label>
+                            <textarea id="ws-field-${f.key}" rows="4" placeholder="${f.placeholder}" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm leading-relaxed">${escapeHtml(val)}</textarea>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">${f.label}</label>
+                            <input type="text" id="ws-field-${f.key}" value="${escapeHtml(val)}" placeholder="${f.placeholder}" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm">
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            editorCard.innerHTML = `
+                <div class="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <span class="text-xs font-semibold text-indigo-600">${ws.step}</span>
+                        <h3 class="text-xl font-bold text-slate-800 mt-0.5">${ws.title}</h3>
+                        <p class="text-sm text-slate-500 mt-1">${ws.desc}</p>
+                    </div>
+                    <div class="shrink-0">
+                        ${getStatusBadge(record.status, true)}
+                    </div>
+                </div>
+
+                ${feedbackHtml}
+
+                <form onsubmit="submitWorksheet(event)" class="space-y-5">
+                    ${fieldsHtml}
+
+                    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <span class="text-xs text-slate-400">
+                            ${record.updatedAt ? 'อัปเดตล่าสุด: ' + new Date(record.updatedAt).toLocaleString('th-TH') : 'ยังไม่มีการบันทึกข้อมูล'}
+                        </span>
+                        <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                            <button type="button" onclick="saveWorksheetData('draft')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-sm transition-colors">
+                                💾 บันทึกร่าง
+                            </button>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl ${record.status === 'revision' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-semibold text-sm shadow-sm transition-all flex items-center space-x-2">
+                                <span>${record.status === 'revision' ? '🔄 ส่งงานที่แก้ไขแล้วให้คุณครู' : '🚀 ส่งงานให้คุณครู'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            `;
+        }
+
+        window.submitWorksheet = function(e) {
+            e.preventDefault();
+            saveWorksheetData('submitted');
+        };
+
+        window.saveWorksheetData = async function(targetStatus) {
+            const ws = WORKSHEETS.find(w => w.id === activeWorksheetId);
+            const answers = {};
+            let hasContent = false;
+
+            ws.fields.forEach(f => {
+                const el = document.getElementById(`ws-field-${f.key}`);
+                const val = el ? el.value.trim() : '';
+                answers[f.key] = val;
+                if (val.length > 0) hasContent = true;
+            });
+
+            if (targetStatus === 'submitted' && !hasContent) {
+                showToast("กรุณากรอกข้อมูลในใบงานก่อนกดส่งงาน", "error");
+                return;
+            }
+
+            const existingRecord = (allGroupsData[currentGroupId]?.worksheets?.[ws.id]) || {};
+            const updatedRecord = {
+                status: targetStatus,
+                answers: answers,
+                feedback: existingRecord.feedback || '',
+                updatedAt: new Date().toISOString()
+            };
+
+            if (!allGroupsData[currentGroupId].worksheets) allGroupsData[currentGroupId].worksheets = {};
+            allGroupsData[currentGroupId].worksheets[ws.id] = updatedRecord;
+            saveToPersistentLocal();
+
+            if (useCloudSync && currentUser) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'project_groups', currentGroupId);
+                    await updateDoc(docRef, {
+                        [`worksheets.${ws.id}`]: updatedRecord
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            
+            renderStudentWorkspace();
+            showToast(targetStatus === 'submitted' ? "ส่งใบงานสำเร็จ! ข้อมูลอัปเดตถึงคุณครูแล้ว" : "บันทึกร่างเรียบร้อย", "success");
+        };
+
+        // ==================== TEACHER DASHBOARD RENDERING ====================
+
+        window.renderTeacherDashboard = function() {
+            const filterGrade = document.getElementById('teacher-grade-filter').value;
+            const groups = Object.values(allGroupsData).filter(g => filterGrade === 'ALL' || g.grade === filterGrade);
+
+            // Calculate Stats
+            let pendingCount = 0;
+            let approvedCount = 0;
+            let revisionCount = 0;
+
+            groups.forEach(g => {
+                const wsMap = g.worksheets || {};
+                Object.values(wsMap).forEach(w => {
+                    if (w.status === 'submitted') pendingCount++;
+                    if (w.status === 'approved') approvedCount++;
+                    if (w.status === 'revision') revisionCount++;
+                });
+            });
+
+            document.getElementById('stat-total-groups').textContent = groups.length;
+            document.getElementById('stat-pending-review').textContent = pendingCount;
+            document.getElementById('stat-approved').textContent = approvedCount;
+            document.getElementById('stat-revision').textContent = revisionCount;
+
+            const container = document.getElementById('teacher-groups-container');
+
+            if (groups.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-12 text-center border border-slate-200">
+                        <p class="text-slate-500">ยังไม่มีข้อมูลกลุ่มโครงงานในระบบ (ให้นักเรียนลงทะเบียนกลุ่มในแท็บ "นักเรียน")</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = groups.map(g => {
+                const wsMap = g.worksheets || {};
+                
+                // Build 10 mini boxes for each worksheet
+                const boxesHtml = WORKSHEETS.map(w => {
+                    const rec = wsMap[w.id] || { status: 'empty' };
+                    let colorClass = 'bg-slate-100 text-slate-400 border-slate-200';
+                    let statusIcon = '';
+
+                    if (rec.status === 'draft') {
+                        colorClass = 'bg-slate-200 text-slate-600 border-slate-300';
+                        statusIcon = '✎';
+                    } else if (rec.status === 'submitted') {
+                        colorClass = 'bg-amber-100 text-amber-800 border-amber-400 ring-2 ring-amber-200 animate-pulse';
+                        statusIcon = '⏳';
+                    } else if (rec.status === 'revision') {
+                        colorClass = 'bg-rose-100 text-rose-800 border-rose-300';
+                        statusIcon = '⚠️';
+                    } else if (rec.status === 'approved') {
+                        colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                        statusIcon = '✅';
+                    }
+
+                    return `
+                        <button onclick="openReviewModal('${g.groupId}', ${w.id})" class="p-2 rounded-xl border text-center transition-transform hover:scale-105 flex flex-col items-center justify-center ${colorClass}" title="${w.title}">
+                            <span class="text-xs font-bold">ใบที่ ${w.id}</span>
+                            <span class="text-xs mt-0.5">${statusIcon || '-'}</span>
+                        </button>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-md">${g.grade}</span>
+                                    <h3 class="font-bold text-base sm:text-lg text-slate-800">${escapeHtml(g.groupName)}</h3>
+                                </div>
+                            <div class="text-xs text-slate-400">
+                                รหัสผ่านกลุ่ม: <span class="font-mono font-semibold text-slate-600">${escapeHtml(g.password || '-')}</span> • คลิกที่ใบงานเพื่อตรวจ
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 pt-4">
+                            ${boxesHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // ==================== TEACHER REVIEW MODAL ====================
+
+        window.openReviewModal = function(groupId, wsId) {
+            const group = allGroupsData[groupId];
+            const ws = WORKSHEETS.find(w => w.id === wsId);
+            if (!group || !ws) return;
+
+            currentModalTarget = { groupId, wsId };
+            const record = (group.worksheets && group.worksheets[wsId]) || { status: 'empty', answers: {}, feedback: '' };
+
+            document.getElementById('modal-group-badge').textContent = `${group.grade} | ${group.groupName}`;
+            document.getElementById('modal-worksheet-title').textContent = ws.title;
+            document.getElementById('modal-feedback-input').value = record.feedback || '';
+
+            const body = document.getElementById('modal-content-body');
+            
+            if (!record.answers || Object.keys(record.answers).length === 0) {
+                body.innerHTML = `<div class="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">นักเรียนยังไม่ได้กรอกข้อมูลในใบงานนี้</div>`;
+            } else {
+                body.innerHTML = ws.fields.map(f => {
+                    const ans = record.answers[f.key] || '-';
+                    return `
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div class="text-xs font-bold text-indigo-700 mb-1">${f.label}</div>
+                            <div class="text-sm text-slate-800 whitespace-pre-line leading-relaxed">${escapeHtml(ans)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('review-modal').classList.remove('hidden');
+        };
+
+        window.closeReviewModal = function() {
+            document.getElementById('review-modal').classList.add('hidden');
+        };
+
+        window.submitTeacherReview = async function(newStatus) {
+            const { groupId, wsId } = currentModalTarget;
+            if (!groupId || !wsId) return;
+
+            const feedback = document.getElementById('modal-feedback-input').value.trim();
+            const group = allGroupsData[groupId];
+            const existingRec = (group.worksheets && group.worksheets[wsId]) || { answers: {} };
+
+            const updatedRec = {
+                ...existingRec,
+                status: newStatus,
+                feedback: feedback,
+                reviewedAt: new Date().toISOString()
+            };
+
+            if (!allGroupsData[groupId].worksheets) allGroupsData[groupId].worksheets = {};
+            allGroupsData[groupId].worksheets[wsId] = updatedRec;
+            saveToPersistentLocal();
+
+            if (useCloudSync && currentUser) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'project_groups', groupId);
+                    await updateDoc(docRef, {
+                        [`worksheets.${wsId}`]: updatedRec
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            
+            renderTeacherDashboard();
+            closeReviewModal();
+            showToast(newStatus === 'approved' ? "อนุมัติใบงานเรียบร้อย" : "ส่งกลับให้นักเรียนแก้ไขแล้ว", "success");
+        };
+
+        window.exportAllDataBackup = function() {
+            const dataStr = JSON.stringify(allGroupsData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ProjectHub_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("ดาวน์โหลดไฟล์สำรองข้อมูลเรียบร้อย", "success");
+        };
+
+        // ==================== HELPER UTILITIES ====================
+
+        function getStatusBadge(status, isLarge = false) {
+            const sizeClass = isLarge ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[11px]';
+            switch (status) {
+                case 'submitted':
+                    return `<span class="inline-flex items-center font-semibold rounded-full bg-amber-100 text-amber-800 ${sizeClass}">⏳ รอคุณครูตรวจ</span>`;
+                case 'approved':
+                    return `<span class="inline-flex items-center font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 ${sizeClass}">👁️ ครูตรวจแล้ว • ผ่าน</span>`;
+                case 'revision':
+                    return `<span class="inline-flex items-center font-semibold rounded-full bg-rose-100 text-rose-800 border border-rose-300 animate-pulse ${sizeClass}">👁️ ครูตรวจแล้ว • แก้ไข</span>`;
+                case 'draft':
+                    return `<span class="inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-600 ${sizeClass}">✎ บันทึกร่าง</span>`;
+                default:
+                    return `<span class="inline-flex items-center font-medium rounded-full bg-slate-100 text-slate-400 ${sizeClass}">ยังไม่เริ่ม</span>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            toast.className = `${bg} text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2 transform transition-all duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `<span>${type === 'error' ? '❌' : '✨'}</span><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Start App
+        window.addEventListener('DOMContentLoaded', initBackend);
+    </script>
+</body>
+</html>
